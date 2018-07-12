@@ -1,0 +1,50 @@
+BASE := $(CURDIR)/..
+COMPONENTS=components
+LDFLAGS += -Lcomponents/lib -L/usr/local/lib
+LIBS=-lblitz2 -lthrift  -levent -lzookeeper_st -lboost_program_options -lboost_thread  -lboost_system
+#=========================================================================
+EXE_SOURCES = $(wildcard src/*.cc)
+EXE_COMMON_SOURCES = $(filter-out src/proxy.cc, $(EXE_SOURCES))
+EXE_COMMON_OBJS = $(patsubst %.cc,%.o, $(EXE_COMMON_SOURCES))
+PROXY_BIN=region
+PROXY_SOURCES = $(EXE_COMMON_SOURCES) src/regionserver.cc
+PROXY_OBJS = $(patsubst %.cc,%.o, $(PROXY_SOURCES))
+
+$(PROXY_BIN): $(PROXY_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+# =================测试相关文件=====
+UT_SOURCES = $(wildcard ut/*.cc)
+.PHONY:aaa
+aaa:
+	@echo $(EXE_SOURCES)
+	@echo $(EXE_COMMON_OBJS)
+UT_PROGRAMS = ut/config_ut 
+#$(UT_PROGRAMS) : % : %.o $(EXE_COMMON_OBJS) gtest_main.a
+#	$(CXX) $(LDFLAGS) $^ -o $@ $(LIBS)
+
+ut/config_ut:ut/config_ut.o gtest_main.a
+	$(CXX) $(LDFLAGS) $^ -o $@ $(LIBS)
+GTEST_DIR = $(COMPONENTS)/gtest-1.6.0
+GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
+                $(GTEST_DIR)/include/gtest/internal/*.h
+GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
+gtest-all.o : $(GTEST_SRCS_)
+	$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(CXXFLAGS) -c \
+            $(GTEST_DIR)/src/gtest-all.cc
+
+gtest_main.o : $(GTEST_SRCS_)
+	$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(CXXFLAGS) -c \
+            $(GTEST_DIR)/src/gtest_main.cc
+gtest.a : gtest-all.o
+	$(AR) $(ARFLAGS) $@ $^
+gtest_main.a : gtest-all.o gtest_main.o
+	$(AR) $(ARFLAGS) $@ $^
+
+OUTPUT_EXES=$(PROXY_BIN)
+SOURCES = $(EXE_SOURCES) $(UT_SOURCES)
+HEADERS = $(wildcard src/*.h)
+HEADERS += $(wildcard ut/*.h)
+SMOKE_PROGRAMS = ut/config_ut
+TMPFILES = gtest_main.a gtest.a gtest_main.o gtest-all.o
+INCLUDES=-I./src -I$(COMPONENTS)/include -I/usr/local/include/thrift -I$(GTEST_DIR)/include
+

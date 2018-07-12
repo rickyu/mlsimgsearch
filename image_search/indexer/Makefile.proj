@@ -1,0 +1,86 @@
+#需要输出的变量
+# BASE : 工程在整个svn中的位置，用于依赖其他模块.
+# MODULE_DEPENDS : 依赖svn中的其他模块.
+# LIBS : 需要链接哪些库. -lxxx -lxxx
+# PROJ_INCLUDE : 
+# SOURCES : 所有的源文件.
+# OUTPUT : 所有产出, 用于clean
+# TEST_PROGRAMS :所有测试程序.
+# SMOKE_PROGRAMS : 冒烟测试程序.
+#
+# 输出的规则: all
+
+BASE := ../../..
+IMAGE_SEARCH_BASE := ..
+IMAGE_SERVICE_BASE := ../..
+BOF_CORE_PATH := $(IMAGE_SEARCH_BASE)/bof_core
+LIBSRC_ROOT := $(BASE)/libsrc
+
+CXX = g++
+CCFLAG = -g -std=c++0x -Wall
+
+LDFLAGS+=-Lcomponents/lib -L/usr/local/lib -L/usr/local/lib/mysql/
+LIBS=-L$(BOF_CORE_PATH)/output/lib -lbof_core -L$(IMAGE_SERVICE_BASE)/common/output/lib -limgcom -lrockapi_cpp -L$(BASE)/libsrc/utils/lib/ -lmemcached -lutils -lopencv_imgproc -lopencv_core -lopencv_contrib -lopencv_features2d -lopencv_nonfree -lopencv_legacy -lboost_serialization -lthrift -lcurl -ljson -lvlfeat -lboost_thread
+PROJ_INCLUDE=-I./include -Icomponents/include -Icomponents/include/rock_api_cpp -I/usr/local/include/thrift/ -I$(BOF_CORE_PATH)/output/include -I$(IMAGE_SERVICE_BASE)/image_storage/beansdb_client/include -I$(IMAGE_SERVICE_BASE)/common/include -I$(LIBSRC_ROOT)/utils/output/include/
+BIN=/usr/local/bin
+
+MAPPER_OBJS=src/mapper.o
+REDUCER_OBJS=src/reducer.o
+FORMATTER_OBJS=src/formatter.o
+MERGER_OBJS=src/merger.o
+NORMALIZE_MAPPER_OBJS=src/normalize_mapper.o
+NORMALIZE_REDUCER_OBJS=src/normalize_reducer.o
+AFTER_NORMALIZE_REDUCER_OBJS=src/after_normalize_reducer.o
+
+#=========================================================================
+OUTPUT_PATH ?= output
+bin_dir = $(OUTPUT_PATH)/bin
+.PHONY: all
+all: $(bin_dir)/index_mapper $(bin_dir)/index_reducer $(bin_dir)/index_formatter $(bin_dir)/normalize_mapper $(bin_dir)/normalize_reducer $(bin_dir)/after_normalize_reducer $(bin_dir)/index_merger
+	if [ ! -d $(OUTPUT_PATH) ]; then mkdir $(OUTPUT_PATH); fi
+	if [ ! -d $(bin_dir) ]; then mkdir $(bin_dir); fi
+	if [ ! -d $(OUTPUT_PATH)/conf ]; then mkdir $(OUTPUT_PATH)/conf; fi
+	if [ -d conf/ ]; then cp conf/* $(OUTPUT_PATH)/conf/; fi
+	if [ ! -d $(OUTPUT_PATH)/scripts ]; then mkdir $(OUTPUT_PATH)/scripts; fi
+	cp -r scripts/* $(OUTPUT_PATH)/scripts
+OUTPUT += $(bin_dir)/index_mapper $(bin_dir)/index_reducer $(bin_dir)/index_formatter $(bin_dir)/normalize_mapper $(bin_dir)/normalize_reducer $(bin_dir)/after_normalize_reducer $(bin_dir)/index_merger
+
+lib_sources = $(wildcard src/*.cc)
+
+lib_objs = $(patsubst %.cc,%.o,$(lib_sources))
+
+lib_mapper_objs = $(filter-out $(REDUCER_OBJS) $(FORMATTER_OBJS) $(NORMALIZE_MAPPER_OBJS) $(NORMALIZE_REDUCER_OBJS) $(AFTER_NORMALIZE_REDUCER_OBJS) $(MERGER_OBJS), $(lib_objs))
+lib_reducer_objs = $(filter-out $(FORMATTER_OBJS) $(MAPPER_OBJS) $(NORMALIZE_MAPPER_OBJS) $(NORMALIZE_REDUCER_OBJS) $(AFTER_NORMALIZE_REDUCER_OBJS) $(MERGER_OBJS), $(lib_objs))
+lib_formatter_objs = $(filter-out $(MAPPER_OBJS) $(REDUCER_OBJS) $(NORMALIZE_MAPPER_OBJS) $(NORMALIZE_REDUCER_OBJS) $(AFTER_NORMALIZE_REDUCER_OBJS) $(MERGER_OBJS), $(lib_objs))
+lib_normalize_mapper = $(filter-out $(MAPPER_OBJS) $(REDUCER_OBJS) $(FORMATTER_OBJS) $(NORMALIZE_REDUCER_OBJS) $(AFTER_NORMALIZE_REDUCER_OBJS) $(MERGER_OBJS), $(lib_objs))
+lib_normalize_reducer = $(filter-out $(MAPPER_OBJS) $(REDUCER_OBJS) $(FORMATTER_OBJS) $(NORMALIZE_MAPPER_OBJS) $(AFTER_NORMALIZE_REDUCER_OBJS) $(MERGER_OBJS), $(lib_objs))
+lib_after_normalize_reducer = $(filter-out $(MAPPER_OBJS) $(REDUCER_OBJS) $(FORMATTER_OBJS) $(NORMALIZE_MAPPER_OBJS) $(NORMALIZE_REDUCER_OBJS) $(MERGER_OBJS), $(lib_objs))
+lib_merger_objs = $(filter-out $(MAPPER_OBJS) $(REDUCER_OBJS) $(FORMATTER_OBJS) $(NORMALIZE_MAPPER_OBJS) $(NORMALIZE_REDUCER_OBJS) $(AFTER_NORMALIZE_REDUCER_OBJS), $(lib_objs))
+
+$(bin_dir)/index_mapper: $(lib_mapper_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/index_reducer: $(lib_reducer_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/index_formatter: $(lib_formatter_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/normalize_mapper: $(lib_normalize_mapper)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/normalize_reducer: $(lib_normalize_reducer)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/after_normalize_reducer: $(lib_after_normalize_reducer)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/index_merger: $(lib_merger_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)

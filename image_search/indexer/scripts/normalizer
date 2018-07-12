@@ -1,0 +1,67 @@
+#!/bin/bash
+
+function printUsage()
+{
+    echo "sh $BASE_NAME [options]"
+    echo " -i input file"
+    echo " -o output path"
+    echo " -u current user"
+    echo " -w working path"
+}
+
+INPUT_FILE=""
+OUTPUT_PATH=""
+USER=""
+WORKING_PATH=""
+
+while getopts u:w:i:o: option
+do
+    case $option in
+        u) USER=$OPTARG
+            echo "CUR_USER=$USER"
+            ;;
+        w) WORKING_PATH=$OPTARG
+            echo "WORKING_PATH=$WORKING_PATH"
+            ;;
+        i) INPUT_FILE=$OPTARG
+            echo "INPUT_FILE=$INPUT_FILE"
+            ;;
+        o) OUTPUT_PATH=$OPTARG
+            echo "OUTPUT_PATH=$OUTPUT_PATH"
+            ;;
+        /?) echo "wrong param"
+            printUsage
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$WORKING_PATH" = "" -o "$USER" = "" -o "$INPUT_FILE" = "" -o "$OUTPUT_PATH" = "" ]
+then
+    printUsage
+    exit 1
+fi
+
+INDEXER_PATH=$WORKING_PATH/$USER/indexer
+SHARED_PATH=$WORKING_PATH/$USER/shared
+NORMALIZE_MAPPER=$INDEXER_PATH/bin/normalize_mapper
+NORMALIZE_MAPPER_CONF=$INDEXER_PATH/conf/mapper.conf
+NORMALIZE_REDUCER=$INDEXER_PATH/bin/normalize_reducer
+NORMALIZE_REDUCER_CONF=$INDEXER_PATH/conf/mapper.conf
+WORD_DATA=$SHARED_PATH/word.data
+VOC_PATH=$SHARED_PATH/voc.yml
+HADOOP_BIN=$HADOOP_HOME/bin/hadoop
+
+${HADOOP_BIN} dfs -rmr $OUTPUT_PATH
+
+${HADOOP_BIN} jar ${HADOOP_HOME}/contrib/streaming/hadoop-streaming-1.0.4.jar \
+    -D stream.map.output.field.separator="\t" \
+    -D stream.reduce.output.field.separator="\t" \
+    -D mapred.map.tasks=1 \
+    -D mapred.reduce.tasks=6 \
+    -D mapred.task.timeout=3600000 \
+    -D mapred.min.split.size=1099511627776 \
+    -mapper "${NORMALIZE_MAPPER} ${NORMALIZE_MAPPER_CONF} ${NORMALIZE_REDUCER} ${NORMALIZE_REDUCER_CONF}" \
+    -reducer "${NORMALIZE_REDUCER} ${NORMALIZE_REDUCER_CONF}" \
+    -input "$INPUT_FILE" \
+    -output "$OUTPUT_PATH"

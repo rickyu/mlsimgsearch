@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/repos/!svn/ver/401528/meilishuo/middleware/image_service/common/include/image
+END
+constant.h
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/repos/!svn/ver/77049/meilishuo/middleware/image_service/common/include/image/constant.h
+END
+graphics_magick.h
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/repos/!svn/ver/401528/meilishuo/middleware/image_service/common/include/image/graphics_magick.h
+END
+image_base.h
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/repos/!svn/ver/401528/meilishuo/middleware/image_service/common/include/image/image_base.h
+END
+image_recognise.h
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/repos/!svn/ver/77049/meilishuo/middleware/image_service/common/include/image/image_recognise.h
+END
+image.h
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/repos/!svn/ver/77049/meilishuo/middleware/image_service/common/include/image/image.h
+END
+opencv_process.h
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/repos/!svn/ver/401528/meilishuo/middleware/image_service/common/include/image/opencv_process.h
+END

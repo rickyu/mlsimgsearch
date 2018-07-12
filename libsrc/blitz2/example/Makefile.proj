@@ -1,0 +1,30 @@
+BASE := $(CURDIR)/..
+COMPONENTS=../output
+LDFLAGS+=-L/usr/local/lib/mysql -L/usr/local/lib -L$(COMPONENTS)/lib
+LIBS=-lblitz2 -levent -lthrift  -lhiredis -lmysqlclient -lzookeeper_st -lboost_thread -lboost_system -lboost_program_options
+
+THRIFT_SOURCES1=test_constants.cpp  Test.cpp  test_types.cpp
+THRIFT_SOURCES=$(patsubst %.cpp,gen-cpp/%.cpp, $(THRIFT_SOURCES1))
+THRIFT_HEADERS1=test_constants.h  Test.h  test_types.h
+THRIFT_HEADERS=$(patsubst %.h,gen-cpp/%.h, $(THRIFT_HEADERS1))
+THRIFT_OBJS=$(patsubst %.cpp,%.o, $(THRIFT_SOURCES))
+$(THRIFT_SOURCES) $(THRIFT_HEADERS):src/test.thrift
+	thrift -gen cpp $<
+
+#=========================================================================
+echo_server:src/echo_server.o
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+echo_ab:src/echo_ab.o
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+zookeeper_test:src/zookeeper_test.o
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+thrift_server:src/thrift_server.o src/get_one_handler.o $(THRIFT_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+
+OUTPUT_EXES=echo_server echo_ab zookeeper_test thrift_server
+SOURCES = $(wildcard src/*.cc) $(THRIFT_SOURCES)
+HEADERS = $(wildcard src/*.h) $(THRIFT_HEADERS)
+TMPFILES = gtest_main.a gtest.a gtest_main.o gtest-all.o
+INCLUDES=-I./src -I./gen-cpp -I$(COMPONENTS)/include -I/usr/local/include/mysql -I/usr/local/include/thrift
+

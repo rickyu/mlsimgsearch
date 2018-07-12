@@ -1,0 +1,163 @@
+#!/bin/bash
+
+BASE_NAME=$0
+
+function printUsage()
+{
+    echo "sh $BASE_NAME [options]"
+    echo " -i input file"
+    echo " -o output dir"
+    echo " -c centroids files"
+    echo " -w working path"
+    echo " -K k cluster for kmeans"
+    echo " [optional] -n max execute times, default it's 500"
+    echo " [optional] -e terminate criteria expsilon, default it's 1.0"
+}
+
+function copyFilesToSlaves()
+{
+    slaves_file=$HADOOP_HOME/conf/slaves
+    src_path=$1
+    dst_path=$2
+    while read line
+    do
+        scp $src_path $line:$dst_path
+    done < $slaves_file ;
+}
+
+function operateSlaves()
+{
+    slaves_file=$HADOOP_HOME/conf/slaves
+    command=$1
+    while read line
+    do
+        ssh $line "$command"
+    done < $slaves_file ;
+}
+
+INPUT_FILE=""
+OUTPUT_FILE=""
+CENTROIDS_FILE=""
+CLUSTER_K=""
+WORKING_PATH=""
+EXECUTE_TIMES=50
+TERM_EPSILON=1.0
+
+while getopts i:o:c:K:w:n:e: option
+do
+    case $option in
+        i) INPUT_FILE=$OPTARG
+           echo "INPUT_FILE=$INPUT_FILE"
+           ;;
+        o) OUTPUT_FILE=$OPTARG
+            echo "OUTPUT_FILE=$OUTPUT_FILE"
+            ;;
+        c) CENTROIDS_FILE=$OPTARG
+            echo "CENTROIDS_FILE=$CENTROIDS_FILE"
+            ;;
+        w) WORKING_PATH=$OPTARG
+            echo "WORKING_PATH=$WORKING_PATH"
+            ;;
+        K) CLUSTER_K=$OPTARG
+            echo "CLUSTER_K=$CLUSTER_K"
+            ;;
+        n) EXECUTE_TIMES=$OPTARG
+            echo "EXECUTE_TIMES=$EXECUTE_TIMES"
+            ;;
+        e) TERM_EPSILON=$OPTARG
+            echo "TERM_EPSILON=$TERM_EPSILON"
+            ;;
+        /?) echo "wrong param"
+            printUsage
+            exit 1
+            ;;
+    esac
+done
+
+if [ $# -lt 3 -o "$INPUT_FILE" = "" -o "$OUTPUT_FILE" = "" -o "$CENTROIDS_FILE" = "" -o "$WORKING_PATH" = "" ]; then
+   printUsage
+   exit 1
+fi
+
+HADOOP_BIN=${HADOOP_HOME}/bin/hadoop
+HADOOP_STREAM_PATH=${HADOOP_HOME}/contrib/streaming/hadoop-streaming-1.0.4.jar
+CLUSTER_MAPPER_BIN=${WORKING_PATH}/bin/cluster_mapper
+CLUSTER_REDUCER_BIN=${WORKING_PATH}/bin/cluster_reducer
+CENTROIDS_CMP_BIN=${WORKING_PATH}/bin/centroids_comparer
+LOCAL_CENTROIDS_CMP_PATH=${WORKING_PATH}/centriods_cmp
+CUR_EXE_TIMES=0
+CENTROIDS_FILE_EXIST=0
+
+if [ "$CENTROIDS_FILE" = "" ]
+then
+    CENTROIDS_FILE=${LOCAL_CENTROIDS_CMP_PATH}/centriods
+fi
+if [ ! -d ${LOCAL_CENTROIDS_CMP_PATH} ]; then mkdir -p ${LOCAL_CENTROIDS_CMP_PATH}; fi
+if [ ! -f ${CENTROIDS_FILE} ]
+then
+    operateSlaves "rm ${CENTROIDS_FILE}"
+else
+    copyFilesToSlaves ${CENTROIDS_FILE} ${CENTROIDS_FILE}
+fi
+
+while [ 1 -eq 1 ]
+do
+    # 删除输出目录
+    ${HADOOP_BIN} dfs -rmr ${OUTPUT_FILE}
+
+    # 执行map-reduce
+    ${HADOOP_BIN} jar ${HADOOP_STREAM_PATH} \
+        -D stream.map.output.field.separator=":" \
+        -D stream.reduce.input.field.separator=":" \
+        -D stream.num.map.output.fields=1 \
+        -D stream.num.reduce.output.fields=1 \
+        -D num.key.fields.for.partition=1 \
+        -D mapred.map.tasks=48 \
+        -D mapred.reduce.tasks=36 \
+        -files ${CLUSTER_MAPPER_BIN}, ${CLUSTER_REDUCER_BIN} \
+        -mapper "${CLUSTER_MAPPER_BIN} ${CLUSTER_K} ${CENTROIDS_FILE}" \
+        -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
+        -reducer "${CLUSTER_REDUCER_BIN}" \
+        -input ${INPUT_FILE} \
+        -output ${OUTPUT_FILE}
+
+    if [ -f ${CENTROIDS_FILE_EXIST} ]; then CENTROIDS_FILE_EXIST=1; fi
+    CENTROIDS_FILE_CUR=${CENTROIDS_FILE}.cur
+    if [ -f ${CENTROIDS_FILE_CUR} ]; then rm ${CENTROIDS_FILE_CUR}; fi
+    rm ${LOCAL_CENTROIDS_CMP_PATH}/part-*
+    ${HADOOP_BIN} dfs -get ${OUTPUT_FILE}/part-* ${LOCAL_CENTROIDS_CMP_PATH}/
+    for i in `ls ${LOCAL_CENTROIDS_CMP_PATH}/part-*`
+    do
+        echo "merge file $i into ${CENTROIDS_FILE_CUR}"
+        cp $i ${WORKING_PATH}/cluster/
+        cat $i >> ${CENTROIDS_FILE_CUR}
+    done
+
+    # 比较质心是否改变
+    ${CENTROIDS_CMP_BIN} ${CENTROIDS_FILE} ${CENTROIDS_FILE_CUR} ${TERM_EPSILON}
+    if [ $? -eq 0 ]
+    then
+        mv ${CENTROIDS_FILE_CUR} ${CENTROIDS_FILE}
+        echo ">>>>>>>>>>>>>>>>>>>>>>>>>> Centroids compare result: same"
+        break
+    elif [ $? -lt 0 ]
+    then
+	    if [ ${CUR_EXE_TIMES} -eq 0 -a ${CENTROIDS_FILE_EXIST} -eq 0 ]
+	    then
+	        echo ">>>>>>>>>>>>>>>>>>>>>>>>>> Centroids compared ${CUR_EXE_TIMES} times. ($?)"
+	    else
+	        echo ">>>>>>>>>>>>>>>>>>>>>>>>>> Centroids compare failed! ($?)"
+        fi
+    else
+        echo ">>>>>>>>>>>>>>>>>>>>>>>>>> Centroids compared ${CUR_EXE_TIMES} times. ($?)"
+    fi
+    mv ${CENTROIDS_FILE_CUR} ${CENTROIDS_FILE}    
+    copyFilesToSlaves ${CENTROIDS_FILE} ${CENTROIDS_FILE}
+
+    CUR_EXE_TIMES=$((${CUR_EXE_TIMES}+1))
+    # 判断执行次数
+    if [ ${EXECUTE_TIMES} -ne 0 -a ${CUR_EXE_TIMES} -gt ${EXECUTE_TIMES} ]
+    then
+        break
+    fi
+done

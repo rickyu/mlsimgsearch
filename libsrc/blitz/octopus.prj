@@ -1,0 +1,7 @@
+depend_yum('boost.x86_64')
+depend_yum('mysql51.x86_64')
+depend_yum('thrift.x86_64')
+depend_yum('libevent2.x86_64')
+depend_yum('hiredis.x86_64')
+depend_component('libsrc/utils')
+depend_component('libsrc/gtest')

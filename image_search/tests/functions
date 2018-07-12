@@ -1,0 +1,54 @@
+#!/bin/bash
+
+function calc_succ_rate()
+{
+    if [ $# -lt 2 ]; then
+        echo "Usage: calc_succ_rate success_times total_times"
+        return 1
+    fi
+    echo "$1 $2" | awk '{printf("%.4f", $1/$2);}'
+    return 0
+}
+
+function extract_succ_pic_key()
+{
+    if [ $# -lt 1 ]; then
+        echo "Usage: extract_succ_pic_key picture_data_path [picture_number]"
+        return 1
+    fi
+    pic_number=1000
+    if [ $# -gt 2 ]; then
+        pic_number=$2
+    fi
+    picture_data_path=$1
+    extract_result_save_path=$2
+    head -n ${pic_number} ${picture_data_path} | awk '{print $2;}'
+}
+
+function send_request()
+{
+    if [ $# -lt 1 ]; then
+        echo "Usage: send_request url"
+        return 1
+    fi
+    url=$1
+    curl -s "http://124.202.144.15/search/common?url=$url"
+    return 0
+}
+
+function parse_result()
+{
+    if [ $# -lt 2 ]; then
+        echo "Usage: parse_result parse_json_result_php_file is_same"
+        return 1
+    fi
+    parse_json_result_php_file=$1
+    type=$2
+    if [ $type -eq 1 ]; then
+        type=1
+    else
+        type=2
+    fi
+    php $parse_json_result_php_file $type
+    return 0
+}

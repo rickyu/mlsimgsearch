@@ -1,0 +1,1 @@
+depend_yum('gearmand041.x86_64 json-c.x86_64 libxml2-devel.x86_64')

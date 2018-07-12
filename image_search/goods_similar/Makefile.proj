@@ -1,0 +1,58 @@
+#需要输出的变量
+# BASE : 工程在整个svn中的位置，用于依赖其他模块.
+# MODULE_DEPENDS : 依赖svn中的其他模块.
+# LIBS : 需要链接哪些库. -lxxx -lxxx
+# PROJ_INCLUDE : 
+# SOURCES : 所有的源文件.
+# OUTPUT : 所有产出, 用于clean
+# TEST_PROGRAMS :所有测试程序.
+# SMOKE_PROGRAMS : 冒烟测试程序.
+#
+# 输出的规则: all
+
+BASE := ../../..
+IMAGE_SERVICE_BASE := ../..
+IMAGE_SEARCH_BASE := ..
+BOF_CORE_PATH := $(IMAGE_SEARCH_BASE)/bof_core
+SEARCHD_THRIFT_PATH := ../thrift_protocol/searchd/gen-cpp
+SPATIAL_RANKER_THRIFT_PATH := ../thrift_protocol/spatial_ranker/gen-cpp
+EXEC_MERGE_THRIFT_PATH := ../thrift_protocol/exec_merge/gen-cpp
+
+CXX = g++
+CCFLAG = -g -std=c++0x -Wall
+
+LDFLAGS+=-Lcomponents/lib -L/usr/local/lib -L/usr/local/lib/mysql/ -L./ssdb-master/api/cpp/
+LIBS=-L$(BOF_CORE_PATH)/output/lib -lbof_core -levent -lcurl -lthrift -lboost_thread -lssdb-client -L$(BASE)/libsrc/blitz/output/lib -lblitz -lblitz2 -L$(IMAGE_SERVICE_BASE)/common/lib -limgcom -L$(BASE)/libsrc/utils/lib -lutils -lopencv_highgui -lopencv_imgproc -lopencv_core -lopencv_contrib -lopencv_features2d -lopencv_nonfree -lopencv_legacy -lboost_serialization -ljson -lmemcached -lvlfeat -lboost_filesystem -lboost_program_options
+PROJ_INCLUDE=-I./src -I$(SEARCHD_THRIFT_PATH) -I$(EXEC_MERGE_THRIFT_PATH) -I$(SPATIAL_RANKER_THRIFT_PATH) -I$(BOF_CORE_PATH)/output/include -I$(IMAGE_SERVICE_BASE)/common/include -I$(BASE)/libsrc/utils/include -I$(BASE)/libsrc/blitz/include -I/usr/local/include/thrift -Icomponents/include -I./ssdb-master/api/cpp/
+BIN=/usr/local/bin
+#=========================================================================
+OUTPUT_PATH ?= output
+bin_dir = $(OUTPUT_PATH)/bin
+.PHONY: all
+all: $(bin_dir)/feature_loader $(bin_dir)/goods_similar
+	if [ ! -d $(OUTPUT_PATH) ]; then mkdir $(OUTPUT_PATH); fi
+	if [ ! -d $(OUTPUT_PATH)/bin ]; then mkdir $(OUTPUT_PATH)/bin; fi
+	if [ ! -d $(OUTPUT_PATH)/conf ]; then mkdir $(OUTPUT_PATH)/conf; fi
+	if [ ! -d $(OUTPUT_PATH)/scripts ]; then mkdir $(OUTPUT_PATH)/scripts; fi
+	if [ -d conf ]; then cp conf/* $(OUTPUT_PATH)/conf; fi
+#	if [ -d scripts ]; then cp scripts/* $(OUTPUT_PATH)/scripts; fi
+OUTPUT += $(bin_dir)/feature_loader
+OUTPUT += $(bin_dir)/goods_similar
+
+searchd_thrift_sources=$(wildcard $(SEARCHD_THRIFT_PATH)/*.cpp)
+spatial_ranker_thrift_sources=$(wildcard $(SPATIAL_RANKER_THRIFT_PATH)/*.cpp)
+exec_merge_thrift_sources=$(wildcard $(EXEC_MERGE_THRIFT_PATH)/*.cpp)
+lib_sources = $(wildcard src/*.cc)
+
+lib_objs1=$(patsubst %.cc,%.o,$(lib_sources))
+bin_objs=src/feature_loader.o src/goods_similar.o
+lib_objs=$(filter-out $(bin_objs), $(lib_objs1))
+searchd_thrift_objs = $(patsubst %.cpp,%.o,$(searchd_thrift_sources))
+spatial_ranker_thrift_objs = $(patsubst %.cpp,%.o,$(spatial_ranker_thrift_sources))
+exec_merge_thrift_objs = $(patsubst %.cpp,%.o,$(exec_merge_thrift_sources))
+$(bin_dir)/feature_loader: $(lib_objs) src/feature_loader.o $(searchd_thrift_objs) $(spatial_ranker_thrift_objs) $(exec_merge_thrift_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS) `$(BIN)/GraphicsMagick++-config --cppflags --cxxflags --ldflags --libs`	
+$(bin_dir)/goods_similar: $(lib_objs) src/goods_similar.o $(searchd_thrift_objs) $(spatial_ranker_thrift_objs) $(exec_merge_thrift_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS) `$(BIN)/GraphicsMagick++-config --cppflags --cxxflags --ldflags --libs`	

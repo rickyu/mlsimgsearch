@@ -1,0 +1,37 @@
+#需要输出的变量
+# BASE : 工程在整个svn中的位置，用于依赖其他模块.
+# MODULE_DEPENDS : 依赖svn中的其他模块.
+# LIBS : 需要链接哪些库. -lxxx -lxxx
+# PROJ_INCLUDE : 
+# SOURCES : 所有的源文件.
+# OUTPUT : 所有产出, 用于clean
+# TEST_PROGRAMS :所有测试程序.
+# SMOKE_PROGRAMS : 冒烟测试程序.
+#
+# 输出的规则: all
+
+BASE := ../../..
+IMAGE_SEARCH_BASE := ..
+IMAGE_SERVICE_BASE := ../..
+
+LDFLAGS+=-Lcomponents/lib -L/usr/local/lib 
+LIBS=-lrock_api_cpp -lutils
+PROJ_INCLUDE=-I./include -I/usr/local/include/thrift/ -Icomponents/include/rock_api_cpp -Icomponents/include -Icomponents/include/utils -I/usr/include/libxml2
+
+#=========================================================================
+OUTPUT_PATH ?= output
+lib_dir = $(OUTPUT_PATH)/lib
+.PHONY: all
+all: $(lib_dir)/libbof_core.a
+	if [ ! -d $(OUTPUT_PATH) ]; then mkdir $(OUTPUT_PATH); fi
+	if [ ! -d $(OUTPUT_PATH)/lib ]; then mkdir $(OUTPUT_PATH)/lib; fi
+	if [ ! -d $(OUTPUT_PATH)/include ]; then mkdir $(OUTPUT_PATH)/include; fi
+	cd include;find . -name "*.h" -print | xargs -n 1 echo | cpio -p -d --quiet ../$(OUTPUT_PATH)/include
+
+OUTPUT += $(lib_dir)/libbof_core.a
+
+lib_sources = $(wildcard src/*.cc)
+lib_objs = $(patsubst %.cc,%.o,$(lib_sources))
+$(lib_dir)/libbof_core.a: $(lib_objs)
+	[ -d $(lib_dir) ] ||  mkdir -p $(lib_dir)
+	$(AR) $(ARFLAGS) $@ $^

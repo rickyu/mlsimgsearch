@@ -1,0 +1,98 @@
+#!/bin/bash
+
+BASE_NAME=$0
+
+function printUsage()
+{
+    echo "sh $BASE_NAME [options]"
+    echo " -o result output file path"
+    echo " -m mysql path"
+    echo " -u mysql username"
+    echo " -p mysql password"
+    echo " -D mysql database"
+    echo " -h mysql host"
+    echo " -P mysql port"
+    echo " [optional] -s start picture id. default it's 0"
+    echo " [optional] -e end picture id, 0 means to end. default it's 0"
+    echo " [optianal] -t echo dump lines. default it's 1000000"
+}
+
+START_DUMP_POS=0
+END_DUMP_POS=0
+DUMP_STEP=1000000
+RESULT_OUTPUT_PATH=""
+MYSQL_BIN=""
+MYSQL_USER=""
+MYSQL_PASSWORD=""
+MYSQL_DATABASE=""
+MYSQL_HOST=""
+MYSQL_PORT=3306
+
+while getopts s:e:c:o:m:u:p:D:h:P:t: option
+do
+    case $option in
+        m) MYSQL_BIN=$OPTARG
+            echo "MYSQL_BIN=$MYSQL_BIN"
+            ;;
+        u) MYSQL_USER=$OPTARG
+            echo "MYSQL_USER=$MYSQL_USER"
+            ;;
+	t) DUMP_STEP=$OPTARG
+	    echo "DUMP_STEP=$DUMP_STEP"
+	    ;;
+        p) MYSQL_PASSWORD=$OPTARG
+            echo "MYSQL_PASSWORD=$MYSQL_USER"
+            ;;
+        D) MYSQL_DATABASE=$OPTARG
+            echo "MYSQL_DATABASE=$MYSQL_DATABASE"
+            ;;
+        h) MYSQL_HOST=$OPTARG
+            echo "MYSQL_HOST=$MYSQL_HOST"
+            ;;
+        P) MYSQL_PORT=$MYSQL_PORT
+            echo "MYSQL_PORT=$MYSQL_PORT"
+            ;;
+        o) RESULT_OUTPUT_PATH=$OPTARG
+            echo "RESULT_OUTPUT_PATH=$RESULT_OUTPUT_PATH"
+            ;;
+        s) START_DUMP_POS=$OPTARG
+            echo "START_DUMP_POS=$START_DUMP_POS"
+            ;;
+        e) END_DUMP_POS=$OPTARG
+            echo "END_DUMP_POS=$END_DUMP_POS"
+            ;;
+        /?) echo "wrong param"
+            printUsage
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$MYSQL_BIN" = "" -o "$MYSQL_USER" = "" -o "$MYSQL_PASSWORD" = "" -o "$MYSQL_DATABASE" = "" -o "$MYSQL_HOST" = "" -o "$MYSQL_PORT" = "" -o "$START_DUMP_POS" = "" ]; then
+   printUsage
+   exit 1
+fi
+
+# 得到此时最大的picid
+MAX_PICID=`echo "SELECT max(picid) FROM t_picture" | $MYSQL_BIN -u$MYSQL_USER -p$MYSQL_PASSWORD -h$MYSQL_HOST -P$MYSQL_PORT -D$MYSQL_DATABASE | sed '1d'`
+echo "============ Get Max picture id $MAX_PICID"
+
+# 开始导出数据
+if [ -f $RESULT_OUTPUT_PATH ]; then rm $RESULT_OUTPUT_PATH; fi
+
+CUR_START_PICID=$START_DUMP_POS
+if [ $END_DUMP_POS -eq 0 -o $END_DUMP_POS -gt $MAX_PICID ]
+then
+    END_DUMP_POS=$MAX_PICID
+fi
+
+while [ $CUR_START_PICID -lt $END_DUMP_POS ]
+do
+    cur_max_picid=$(($CUR_START_PICID+$DUMP_STEP))
+    echo "SELECT picid, n_pic_file FROM t_picture WHERE picid>$CUR_START_PICID AND picid<=$cur_max_picid" | $MYSQL_BIN -u$MYSQL_USER -p$MYSQL_PASSWORD -h$MYSQL_HOST -P$MYSQL_PORT -D$MYSQL_DATABASE | sed '1d' >> $RESULT_OUTPUT_PATH.1
+    sed -e '/picdetail/d' $RESULT_OUTPUT_PATH.1 >> $RESULT_OUTPUT_PATH
+    rm $RESULT_OUTPUT_PATH.1
+    CUR_START_PICID=$(($CUR_START_PICID+$DUMP_STEP))
+    echo "============= Dumped $CUR_START_PICID lines"
+    sleep 1
+done

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+function printUsage()
+{
+    echo "sh $BASE_NAME [options]"
+    echo " -w working path"
+    echo " -u current operating user name"
+}
+
+CUR_USER=""
+WORKING_PATH=""
+
+while getopts w:u: option
+do
+    case $option in
+	u) CUR_USER=$OPTARG
+	    echo "CUR_USER=$CUR_USER"
+	    ;;
+	w) WORKING_PATH=$OPTARG
+	    echo "WORKING_PATH=$WORKING_PATH"
+	    ;;
+	/?) echo "wrong param"
+	    printUsage
+	    exit 1
+	    ;;
+    esac
+done
+
+if [ "$WORKING_PATH" = "" -o "$CUR_USER" = "" ]; then
+    printUsage
+    exit 1
+fi
+
+CUR_USER=""
+TEST_ROOT_PATH=${WORKING_PATH}/${CUR_USER}/tests
+RESULT_PARSE_PHP_SCRIPT=${TEST_ROOT_PATH}/parse_json_result.php
+SHARED_DATA_PATH=${WORKING_PATH}/shared
+PICTURE_DATA_PATH=${SHARED_DATA_PATH}/picture.data
+SAME_RESULT_SAMPLE_FILE=${SHARED_DATA_PATH}/same_sample.data
+
+. ${TEST_ROOT_PATH}/functions
+
+SUCCESS_NUM=0
+TOTAL_NUM=0
+PICTURE_SERVER="http://imgst.meilishuo.net"
+TEMP_FILE=tmp.data
+head -n 1000 ${PICTURE_DATA_PATH} > ${TEMP_FILE}
+while read LINE
+do
+    pic_id=`echo $LINE | awk '{printf("%d", $1);}'`
+    pic_key=`echo $LINE | awk '{printf("%s", $2);}'`
+    echo "begin test $pic_key......"
+    result=`send_request ${PICTURE_SERVER}/${pic_key}`
+    same_pic_id=`echo ${result} | parse_result ${RESULT_PARSE_PHP_SCRIPT} 1`
+    # 如果返回的结果中含有搜索的图片则认为成功
+    echo ${same_pic_id} | grep ${pic_id}
+    if [ $? -eq 0 ]; then
+	SUCCESS_NUM=$(( SUCCESS_NUM + 1 ))
+    fi
+    TOTAL_NUM=$(( TOTAL_NUM + 1 ))
+done < ${TEMP_FILE}
+
+if [ -f ${TEMP_FILE} ]; then rm ${TEMP_FILE}; fi
+
+echo "success_num=${SUCCESS_NUM}, total_num=${TOTAL_NUM}"
+calc_succ_rate ${SUCCESS_NUM} ${TOTAL_NUM}

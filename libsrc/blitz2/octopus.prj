@@ -1,0 +1,2 @@
+depend_yum('boost.x86_64 mysql51.x86_64 thrift.x86_64 libevent2.x86_64 hiredis.x86_64 zookeeper.x86_64')
+depend_component('libsrc/gtest')

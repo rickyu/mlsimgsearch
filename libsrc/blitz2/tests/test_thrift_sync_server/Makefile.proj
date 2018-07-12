@@ -1,0 +1,48 @@
+#需要输出 的变量
+# BASE : 工程在整个svn中的位置，用于依赖其他模块.
+# MODULE_DEPENDS : 依赖svn中的其他模块.
+# LIBS : 需要链接哪些库. -lxxx -lxxx
+# PROJ_INCLUDE : 
+# SOURCES : 所有的源文件.
+# OUTPUT : 所有产出, 用于clean
+# TEST_PROGRAMS :所有测试程序.
+# SMOKE_PROGRAMS : 冒烟测试程序.
+#
+# 输出的规则: all
+
+BASE := ../..
+COMPONENTS := ../../components
+
+LIBS=-lblitz -lutils -levent -lthrift  -lhiredis -lmysqlclient -lboost_thread -lboost_system -lboost_program_options
+LDFLAGS+=-L$(COMPONENTS)/lib -L../../output/lib -L/usr/local/lib/mysql -L/usr/local/lib
+PROJ_INCLUDE=-I. -I../../include -I$(COMPONENTS)/include -I$(thrift_gen_dir) -I/usr/local/include/thrift -I/usr/local/include/mysql
+#=========================================================================
+program=test_thrift_sync_server
+.PHONY: all
+all: $(program)
+	thrift --gen py mytest.thrift
+	rm -rf thrift_genpy
+	mv gen-py thrift_genpy
+
+OUTPUT += $(program)
+OUTPUT_PATH+=thrift_genpy gen-cpp
+SOURCES=$(wildcard *.cc)
+SOURCES+=$(thrift_gen_sources)
+objs=$(foreach file, $(SOURCES), $(shell echo $(file) | sed "s/\.c[pc]*[p]*/.o/"))
+thrift_gen_dir=gen-cpp
+thrift_gen_item=mytest_constants.cpp  mytest_constants.h  mytest_types.cpp  mytest_types.h  TestTime.cpp  TestTime.h  
+thrift_gen_files=$(foreach item, $(thrift_gen_item), $(thrift_gen_dir)/$(item))
+thrift_gen_sources=$(filter %.cpp, $(thrift_gen_files))
+thrift_gen_headers=$(filter %.h, $(thrift_gen_files))
+$(thrift_gen_files):mytest.thrift
+	thrift --gen cpp $^
+
+.PHONY : lint
+lint:
+	cppcheck -I include/blitz src/ ut/ example/ 
+	find . -name *.cc -o -name *.h | xargs -I {} cpplint.py {}
+
+test_thrift_sync_server :  $(objs) 
+	$(CXX) $(LDFLAGS) $^ -o $@ $(LIBS)
+
+

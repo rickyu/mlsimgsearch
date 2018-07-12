@@ -1,0 +1,151 @@
+#!/bin/bash
+
+
+BASE_NAME=$0
+
+function printUsage()
+{
+    echo "sh $BASE_NAME [options]"
+    echo " -w working path"
+    echo " -U current operating user name"
+    echo " -K K is k-means cluster number"
+    echo " -m mysql path"
+    echo " -u mysql username"
+    echo " -p mysql password"
+    echo " -D mysql database"
+    echo " -h mysql host"
+    echo " -P mysql port"
+}
+
+MYSQL_BIN=""
+MYSQL_USER=""
+MYSQL_PASSWORD=""
+MYSQL_DATABASE=""
+MYSQL_HOST=""
+MYSQL_PORT=3306
+WORKING_PATH=""
+CUR_USER=""
+CLUSTER_K=0
+
+while getopts K:U:w:m:u:p:D:h:P: option
+do
+    case $option in
+	K) CLUSTER_K=$OPTARG
+	    echo "CLUSTER_K=$CLUSTER_K"
+	    ;;
+	U) CUR_USER=$OPTARG
+	    echo "CUR_USER=$CUR_USER"
+	    ;;
+        w) WORKING_PATH=$OPTARG
+            echo "WORKING_PATH=$WORKING_PATH"
+            ;;
+        m) MYSQL_BIN=$OPTARG
+            echo "MYSQL_BIN=$MYSQL_BIN"
+            ;;
+        u) MYSQL_USER=$OPTARG
+            echo "MYSQL_USER=$MYSQL_USER"
+            ;;
+        p) MYSQL_PASSWORD=$OPTARG
+            echo "MYSQL_PASSWORD=$MYSQL_USER"
+            ;;
+        D) MYSQL_DATABASE=$OPTARG
+            echo "MYSQL_DATABASE=$MYSQL_DATABASE"
+            ;;
+        h) MYSQL_HOST=$OPTARG
+            echo "MYSQL_HOST=$MYSQL_HOST"
+            ;;
+        P) MYSQL_PORT=$MYSQL_PORT
+            echo "MYSQL_PORT=$MYSQL_PORT"
+            ;;
+        /?) echo "wrong param"
+            printUsage
+            exit 1
+            ;;
+    esac
+done
+
+if [ $CLUSTER_K -eq 0 -o "$MYSQL_BIN" = "" -o "$MYSQL_USER" = "" -o "$MYSQL_PASSWORD" = "" -o "$MYSQL_DATABASE" = "" -o "$MYSQL_HOST" = "" -o "$MYSQL_PORT" = "" -o "$WORKING_PATH" = "" -o "$CUR_USER" = "" ]; then
+   printUsage
+   exit 1
+fi
+
+CUR_PATH=${WORKING_PATH}/${CUR_USER}/indexer
+INDEX_BIN_PATH=${CUR_PATH}/bin
+INDEX_CONF_PATH=${CUR_PATH}/conf
+INDEX_SCRIPT_PATH=${CUR_PATH}/scripts
+INDEX_MAPPER_BIN=${INDEX_BIN_PATH}/index_mapper
+INDEX_FORMATTER_BIN=${INDEX_BIN_PATH}/index_formatter
+INDEX_REDUCER_BIN=${INDEX_BIN_PATH}/index_reducer
+PICTURE_DUMPER_PATH=${INDEX_SCRIPT_PATH}/picture_dumper
+INDEX_MAPPER_CONF_FILE=${INDEX_CONF_PATH}/mapper.conf
+INDEX_REDUCER_CONF_FILE=${INDEX_CONF_PATH}/reducer.conf
+RESULT_OUTPUT_PATH=${CUR_PATH}/result
+DATA_PATH=${CUR_PATH}/data
+WORD_WEIGHT_PATH=${WORKING_PATH}/${CUR_USER}/shared/word.data
+PICTURE_DATA_SAVE_PATH=${WORKING_PATH}/${CUR_USER}/shared/picture.data
+VOCABULARY_PATH=${INDEX_CONF_PATH}/voc.yml
+SPLIT_BIN=${INDEX_SCRIPT_PATH}/split
+
+# hadoop设置
+HADOOP_BIN=$HADOOP_HOME/bin/hadoop
+HADOOP_WORKING_PATH=/user/work/${CUR_USER}
+HADOOP_OUTPUT_PATH=${HADOOP_WORKING_PATH}/output
+HADOOP_INPUT_PATH=${HADOOP_WORKING_PATH}/input
+HDFS_PICTURE_DATA_PATH=${HADOOP_INPUT_PATH}/picture.data
+HADOOP_STREAM_PATH=${HADOOP_HOME}/contrib/streaming/hadoop-streaming-1.0.4.jar
+
+# 计数器
+PICTURE_OBJECTS_NUMBER=0
+
+
+# 将数据dump到本地
+#if [ ! -d ${DATA_PATH} ]; then mkdir -p ${DATA_PATH}; fi
+#${PICTURE_DUMPER_PATH} -m ${MYSQL_BIN} -u ${MYSQL_USER} -p ${MYSQL_PASSWORD} -D ${MYSQL_DATABASE} -h ${MYSQL_HOST} -P ${MYSQL_PORT} -o ${PICTURE_DATA_SAVE_PATH} -t 1000000
+PICTURE_OBJECTS_NUMBER=`wc -l ${PICTURE_DATA_SAVE_PATH} | awk '{printf("%d", $1);}'`
+echo "========= Get ${PICTURE_OBJECTS_NUMBER} picture objects"
+
+# 将本地数据上传到HDFS
+${HADOOP_BIN} dfs -rmr ${HADOOP_OUTPUT_PATH}
+${HADOOP_BIN} dfs -rmr ${HADOOP_INPUT_PATH}
+${HADOOP_BIN} dfs -mkdir ${HADOOP_INPUT_PATH}
+${HADOOP_BIN} dfs -put ${PICTURE_DATA_SAVE_PATH} ${HDFS_PICTURE_DATA_PATH}
+
+# 执行mapper, reducer操作
+#    -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
+#    -D mapred.text.key.comparator.options=-k1,2n\
+${HADOOP_BIN} jar ${HADOOP_STREAM_PATH} \
+    -D stream.map.output.field.separator="\t" \
+    -D stream.reduce.output.field.separator="\t" \
+    -D stream.num.map.output.key.fields=2 \
+    -D stream.num.reduce.output.key.fields=1 \
+    -D num.key.fields.for.partition=1 \
+    -D mapred.map.tasks=60 \
+    -D mapred.reduce.tasks=1 \
+    -D mapred.task.timeout=3600000 \
+    -D mapred.max.split.size=4194304 \
+    -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
+    -D mapred.text.key.comparator.options="-k1,1n -k2,2n"\
+    -files ${INDEX_MAPPER_BIN}, ${INDEX_REDUCER_BIN}, ${INDEX_MAPPER_CONF_FILE}, ${VOCABULARY_PATH}, ${INDEX_REDUCER_CONF_FILE} \
+    -mapper "${INDEX_MAPPER_BIN} ${INDEX_MAPPER_CONF_FILE}" \
+    -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
+    -reducer "${INDEX_REDUCER_BIN} ${INDEX_REDUCER_CONF_FILE}" \
+    -input ${HDFS_PICTURE_DATA_PATH} \
+    -output ${HADOOP_OUTPUT_PATH}
+
+# 取数据，并格式化成最终的索引文件
+MAPRE_RESULT_LOCAL_PATH=${CUR_PATH}/mapred_result
+INDEX_HINT_PATH=${WORKING_PATH}/${CUR_USER}/shared/index.hint
+INDEX_DATA_PATH=${WORKING_PATH}/${CUR_USER}/shared/index.data
+if [ -d ${RESULT_OUTPUT_PATH} ]; then
+    rm -r ${RESULT_OUTPUT_PATH}
+fi
+mkdir -p ${RESULT_OUTPUT_PATH}
+if [ -d ${MAPRE_RESULT_LOCAL_PATH} ]; then
+    rm -r ${MAPRE_RESULT_LOCAL_PATH}
+fi
+mkdir -p ${MAPRE_RESULT_LOCAL_PATH}
+$HADOOP_BIN dfs -get ${HADOOP_OUTPUT_PATH}/part-000* ${MAPRE_RESULT_LOCAL_PATH}
+#split
+sh ${SPLIT_BIN} -w ${WORKING_PATH} -u ${CUR_USER}
+#fomatter
+${INDEX_FORMATTER_BIN} ${CLUSTER_K} ${MAPRE_RESULT_LOCAL_PATH} ${INDEX_DATA_PATH} ${INDEX_HINT_PATH} ${WORD_WEIGHT_PATH} ${VOCABULARY_PATH}

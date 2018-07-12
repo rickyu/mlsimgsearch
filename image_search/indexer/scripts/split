@@ -1,0 +1,57 @@
+#!bin/sh
+# split the word frequence from part-00000
+
+function printUsage()
+{
+    echo "sh $BASE_NAME [options]"
+    echo " -w working path"
+    echo " -u current operating user name"
+}
+
+WORKING_PATH=""
+CUR_USER=""
+
+while getopts u:w: option
+do
+    case $option in
+        u) CUR_USER=$OPTARG
+            echo "CUR_USER=$CUR_USER"
+            ;;
+        w) WORKING_PATH=$OPTARG
+            echo "WORKING_PATH=$WORKING_PATH"
+            ;;
+        /?) echo "wrong param"
+            printUsage
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$WORKING_PATH" = "" -o "$CUR_USER" = "" ]
+then
+    printUsage
+    exit 1
+fi
+
+WORD_WEIGHT_PATH=${WORKING_PATH}/${CUR_USER}/shared/word.data
+MAPRESULT=${WORKING_PATH}/${CUR_USER}/indexer/mapred_result/part-00001
+FILE=${WORKING_PATH}/${CUR_USER}/indexer/mapred_result/part-00000
+
+if [ -a $WORD_WEIGHT_PATH ]
+then
+    rm ${WORD_WEIGHT_PATH}
+fi
+while read line
+do
+    key=${line:0:2}
+    if [ "-1" == $key ]
+    then
+        value=${line:3}
+        echo "$value" >> ${WORD_WEIGHT_PATH}
+    else
+        echo "${line}" >> ${MAPRESULT}
+    fi
+
+done < ${FILE}
+#clean
+rm ${FILE}

@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/repos/!svn/ver/76660/meilishuo/middleware/image_service/common/include/common
+END
+constant.h
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/repos/!svn/ver/76383/meilishuo/middleware/image_service/common/include/common/constant.h
+END
+http_client.h
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/repos/!svn/ver/76314/meilishuo/middleware/image_service/common/include/common/http_client.h
+END
+util.h
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/repos/!svn/ver/44826/meilishuo/middleware/image_service/common/include/common/util.h
+END
+jpeg_code.h
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/repos/!svn/ver/50099/meilishuo/middleware/image_service/common/include/common/jpeg_code.h
+END
+thread_pool.h
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/repos/!svn/ver/25421/meilishuo/middleware/image_service/common/include/common/thread_pool.h
+END
+configure.h
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/repos/!svn/ver/76314/meilishuo/middleware/image_service/common/include/common/configure.h
+END
+mlsdb.h
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/repos/!svn/ver/76314/meilishuo/middleware/image_service/common/include/common/mlsdb.h
+END
+img_common.h
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/repos/!svn/ver/41197/meilishuo/middleware/image_service/common/include/common/img_common.h
+END
+thread.h
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/repos/!svn/ver/76660/meilishuo/middleware/image_service/common/include/common/thread.h
+END

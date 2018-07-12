@@ -1,0 +1,61 @@
+#需要输出的变量
+# BASE : 工程在整个svn中的位置，用于依赖其他模块.
+# MODULE_DEPENDS : 依赖svn中的其他模块.
+# LIBS : 需要链接哪些库. -lxxx -lxxx
+# PROJ_INCLUDE : 
+# SOURCES : 所有的源文件.
+# OUTPUT : 所有产出, 用于clean
+# TEST_PROGRAMS :所有测试程序.
+# SMOKE_PROGRAMS : 冒烟测试程序.
+#
+# 输出的规则: all
+
+BASE := ../../..
+IMAGE_SERVICE_BASE := ../..
+IMAGE_SEARCH_BASE := ..
+BOF_CORE_PATH := $(IMAGE_SEARCH_BASE)/bof_core
+
+CXX = g++
+CCFLAG = -g -std=c++0x -Wall
+
+LDFLAGS+=-Lcomponents/lib -L/usr/local/lib -L/usr/local/lib/mysql/
+LIBS=-L$(BOF_CORE_PATH)/output/lib -lbof_core -levent -lcurl -lthrift -lboost_thread -L$(BASE)/libsrc/blitz/output/lib -lblitz -L$(IMAGE_SERVICE_BASE)/common/lib -limgcom -L$(BASE)/libsrc/utils/lib -lutils -lopencv_highgui -lopencv_imgproc -lopencv_core -lopencv_contrib -lopencv_features2d -lopencv_nonfree -lboost_serialization -ljson -lmemcached -lvlfeat
+PROJ_INCLUDE=-I./src -I../thrift_protocol/exec_merge/gen-cpp -I../thrift_protocol/spatial_ranker/gen-cpp -I$(BOF_CORE_PATH)/output/include -I$(IMAGE_SERVICE_BASE)/common/include -I$(IMAGE_SERVICE_BASE)/image_storage/beansdb_client/include -I$(BASE)/libsrc/utils/include -I$(BASE)/libsrc/blitz/include -I/usr/local/include/thrift -Icomponents/include
+BIN=/usr/local/bin
+#=========================================================================
+OUTPUT_PATH ?= output
+bin_dir = $(OUTPUT_PATH)/bin
+
+RANKER_OBJS = src/ranker_service.o
+RANKER_HANDLER_OBJS = src/ranker_handler.o
+MERGE_OBJS = src/merge_service.o 
+MERGE_HANDLER_OBJS = src/merge_handler.o
+
+.PHONY: all
+all: $(bin_dir)/spatial_ranker $(bin_dir)/exec_merge
+	if [ ! -d $(OUTPUT_PATH) ]; then mkdir $(OUTPUT_PATH); fi
+	if [ ! -d $(OUTPUT_PATH)/bin ]; then mkdir $(OUTPUT_PATH)/bin; fi
+	if [ ! -d $(OUTPUT_PATH)/conf ]; then mkdir $(OUTPUT_PATH)/conf; fi
+	if [ -d conf ]; then cp conf/* $(OUTPUT_PATH)/conf; fi
+OUTPUT += $(bin_dir)/spatial_ranker $(bin_dir)/exec_merge
+
+ranker_thrift_sources=$(wildcard ../thrift_protocol/spatial_ranker/gen-cpp/*.cpp)
+merge_thrift_sources=$(wildcard ../thrift_protocol/exec_merge/gen-cpp/*.cpp)
+
+lib_sources = $(wildcard src/*.cc)
+
+lib_objs = $(patsubst %.cc,%.o,$(lib_sources))
+
+lib_ranker_objs = $(filter-out $(MERGE_OBJS) $(MERGE_HANDLER_OBJS), $(lib_objs))
+lib_merge_objs = $(filter-out $(RANKER_OBJS) $(RANKER_HANDLER_OBJS), $(lib_objs))
+
+ranker_thrift_objs = $(patsubst %.cpp,%.o,$(ranker_thrift_sources))
+merge_thrift_objs = $(patsubst %.cpp,%.o,$(merge_thrift_sources))
+
+$(bin_dir)/spatial_ranker: $(lib_ranker_objs) $(ranker_thrift_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS) `$(BIN)/GraphicsMagick++-config --cppflags --cxxflags --ldflags --libs`	
+
+$(bin_dir)/exec_merge: $(lib_merge_objs) $(merge_thrift_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS) `$(BIN)/GraphicsMagick++-config --cppflags --cxxflags --ldflags --libs`	

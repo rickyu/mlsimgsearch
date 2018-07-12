@@ -1,0 +1,8 @@
+*Setting	*Value	*Value
+Documentation	测试ThrifySyncServer的功能	
+Library	thrift_sync_server_tester.ThreadTimeoutTester	
+
+*Test Case	*Action	*Arg
+test long	test_long
+tett timeout	test_timeout
+

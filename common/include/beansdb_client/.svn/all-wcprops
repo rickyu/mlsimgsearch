@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/repos/!svn/ver/135619/meilishuo/middleware/image_service/common/include/beansdb_client
+END
+constant.h
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/repos/!svn/ver/76651/meilishuo/middleware/image_service/common/include/beansdb_client/constant.h
+END
+beansdb_client.h
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/repos/!svn/ver/85094/meilishuo/middleware/image_service/common/include/beansdb_client/beansdb_client.h
+END
+beansdb_clusters.h
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/repos/!svn/ver/76651/meilishuo/middleware/image_service/common/include/beansdb_client/beansdb_clusters.h
+END
+memcached_client.h
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/repos/!svn/ver/135619/meilishuo/middleware/image_service/common/include/beansdb_client/memcached_client.h
+END

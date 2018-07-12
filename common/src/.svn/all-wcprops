@@ -1,0 +1,89 @@
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/repos/!svn/ver/401528/meilishuo/middleware/image_service/common/src
+END
+graphics_magick.cc
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/repos/!svn/ver/401528/meilishuo/middleware/image_service/common/src/graphics_magick.cc
+END
+beansdb_client.cc
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/repos/!svn/ver/135619/meilishuo/middleware/image_service/common/src/beansdb_client.cc
+END
+image_base.cc
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/repos/!svn/ver/77048/meilishuo/middleware/image_service/common/src/image_base.cc
+END
+http_client.cc
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/repos/!svn/ver/111199/meilishuo/middleware/image_service/common/src/http_client.cc
+END
+util.cc
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/repos/!svn/ver/45491/meilishuo/middleware/image_service/common/src/util.cc
+END
+jpeg_code.cc
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/repos/!svn/ver/78875/meilishuo/middleware/image_service/common/src/jpeg_code.cc
+END
+image_recognise.cc
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/repos/!svn/ver/77048/meilishuo/middleware/image_service/common/src/image_recognise.cc
+END
+thread_pool.cc
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/repos/!svn/ver/25421/meilishuo/middleware/image_service/common/src/thread_pool.cc
+END
+configure.cc
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/repos/!svn/ver/76315/meilishuo/middleware/image_service/common/src/configure.cc
+END
+mlsdb.cc
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/repos/!svn/ver/76315/meilishuo/middleware/image_service/common/src/mlsdb.cc
+END
+beansdb_clusters.cc
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/repos/!svn/ver/76651/meilishuo/middleware/image_service/common/src/beansdb_clusters.cc
+END
+memcached_client.cc
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/repos/!svn/ver/135619/meilishuo/middleware/image_service/common/src/memcached_client.cc
+END
+thread.cc
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/repos/!svn/ver/44276/meilishuo/middleware/image_service/common/src/thread.cc
+END
+opencv_process.cc
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/repos/!svn/ver/401528/meilishuo/middleware/image_service/common/src/opencv_process.cc
+END

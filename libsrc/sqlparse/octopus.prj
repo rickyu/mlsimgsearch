@@ -1,0 +1,4 @@
+depend_yum("bison.x86_64");
+depend_yum("flex36.x86_64");
+package_dir('output', 'output')
+package_file('octopus.prj', './')

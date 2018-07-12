@@ -1,0 +1,87 @@
+#!/bin/bash
+
+BASE_NAME=$0
+
+function printUsage()
+{
+    echo "sh $BASE_NAME [options]";
+    echo " -u user name";
+    echo " -w working root path";
+    echo " -K k cluster for kmeans";
+    echo " [option] -q quantizer";
+}
+
+USER_NAME=""
+WORKING_ROOT_PATH=""
+DATA_ROOT_PATH=""
+CLUSTER_K=""
+QUANTIZER=KNN
+
+while getopts u:w:d:K:q: option
+do
+    case $option in
+	u)  USER_NAME=$OPTARG
+	    echo "USER_NAME=$USER_NAME"
+	    ;;
+	w)  WORKING_ROOT_PATH=$OPTARG
+	    echo "WORKING_ROOT_PATH=$WORKING_ROOT_PATH"
+	    ;;
+	K) CLUSTER_K=$OPTARG
+	    echo "CLUSTER_K=$CLUSTER_K"
+	    ;;
+	q) QUANTIZER=$OPTARG
+	    echo "QUANTIZER=$QUANTIZER"
+	    ;;
+	/?) echo "wrong param"
+	    printUsage
+	    exit 1
+	    ;;
+    esac
+done
+
+if [ $# -lt 3 -o "$USER_NAME" = "" -o "$WORKING_ROOT_PATH" = "" ]; then
+   printUsage
+   exit 1
+fi
+
+# 本地路径定义
+USER_SHARED_PATH=${WORKING_ROOT_PATH}/${USER_NAME}/shared
+WORKING_ROOT_PATH=${WORKING_ROOT_PATH}/${USER_NAME}/vocabulary_creator
+DATA_ROOT_PATH=${USER_SHARED_PATH}
+DESCRIPTORS_FILE_PATH=${DATA_ROOT_PATH}/desc.data
+CLUSTER_RESULT_PATH=${DATA_ROOT_PATH}/clusters
+CLUSTER_RESULT_FILE=${CLUSTER_RESULT_PATH}/centriods
+DESCRIPTOR_EXTRACTOR_BIN=${WORKING_ROOT_PATH}/bin/descriptors_extractor
+DESCRIPTOR_EXTRACTOR_CONF=${WORKING_ROOT_PATH}/conf/desextractor.conf
+CLUSTER_FORMATTER_BIN=${WORKING_ROOT_PATH}/bin/cluster_formatter
+CLUSTER_FORMATTED_RESULT_FILE=${USER_SHARED_PATH}/voc.yml
+PROJECT_P_FILE=${USER_SHARED_PATH}/project_p.yml
+MEDIAN_VALUE_MATRIX_FILE=${USER_SHARED_PATH}/median_value.yml
+KMEANS_CLUSTER=${WORKING_ROOT_PATH}/scripts/kmeans_cluster
+HAMMING_EMBEDDING=${WORKING_ROOT_PATH}/bin/hamming_embedding
+if [ ! -d ${CLUSTER_RESULT_PATH} ]; then mkdir -p ${CLUSTER_RESULT_PATH}; fi
+
+# HADOOP路径定义
+HADOOP_BIN=${HADOOP_HOME}/bin/hadoop
+HADOOP_USER_ROOT_PATH=/user/${USER_NAME}
+HADOOP_BASE_PATH=${HADOOP_USER_ROOT_PATH}/cluster
+HADOOP_DESCIPTORS_DATA_PATH=${HADOOP_BASE_PATH}/desfiles
+HADOOP_CLUSTER_OUTPUT_PATH=${HADOOP_BASE_PATH}/output
+
+# 从图片文件中抽取特征向量
+# ${DESCRIPTOR_EXTRACTOR_BIN} ${DESCRIPTOR_EXTRACTOR_CONF}
+
+# 将向量文件上传到HDFS
+${HADOOP_BIN} dfs -mkdir ${HADOOP_USER_ROOT_PATH}
+${HADOOP_BIN} dfs -mkdir ${HADOOP_BASE_PATH}
+${HADOOP_BIN} dfs -put ${DESCRIPTORS_FILE_PATH} ${HADOOP_DESCIPTORS_DATA_PATH}
+
+# 执行kmeans聚类
+# ${KMEANS_CLUSTER} -i ${HADOOP_DESCIPTORS_DATA_PATH} -o ${HADOOP_CLUSTER_OUTPUT_PATH} -w ${WORKING_ROOT_PATH} -K ${CLUSTER_K} -c ${CLUSTER_RESULT_FILE}
+
+# 执行hamming embeding
+${HAMMING_EMBEDDING} ${CLUSTER_FORMATTED_RESULT_FILE} ${DESCRIPTORS_FILE_PATH} ${PROJECT_P_FILE} ${MEDIAN_VALUE_MATRIX_FILE} ${QUANTIZER}
+
+# 获取聚类结果
+# echo "Get cluster result: ${CLUSTER_RESULT_FILE}"
+# ${CLUSTER_FORMATTER_BIN} ${CLUSTER_RESULT_FILE} ${CLUSTER_FORMATTED_RESULT_FILE}

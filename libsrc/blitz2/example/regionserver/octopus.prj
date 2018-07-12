@@ -1,0 +1,18 @@
+depend_component('libsrc/blitz2', type='compile')
+depend_component('libsrc/gtest')
+depend_yum('boost.x86_64 thrift.x86_64 gperftools.x86_64 libevent2.x86_64')
+
+script('start', cmd='./bin/batch_rpc -c config/batchrpc.conf --name={{name}}', supervise=True)
+script('stop', cmd='./scripts/stop.sh')
+script('install', cmd='sh ./scripts/install.sh')
+
+
+package(id='common', 
+       dirs=[('bin', 'bin'), ('METAINFO', 'METAINO')],
+       tpls=[ ('scripts/stop.sh.tpl', 'scripts/stop.sh'),],
+       files=[('scripts/install.sh', 'scripts/install.sh'), ('octopus.prj', 'octopus.prj')])
+package(id='bj', extends='common',
+        tpls=[('config/{{env}}/batchrpc.conf', 'config/batchrpc.conf')])
+
+package(id='gz', extends='common',
+        tpls=[('config/{{env}}/batchrpc-gz.conf', 'config/batchrpc.conf')])

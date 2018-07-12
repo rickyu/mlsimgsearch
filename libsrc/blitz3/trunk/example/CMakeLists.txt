@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 2.6)
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static")"
+#set(CMAKE_EXE_LINKER_FLAGS "-static")
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost REQUIRED COMPONENTS  coroutine context system)
+MESSAGE("Boost_LIBRARIES: ${Boost_LIBRARIES}")
+include_directories(${Boost_INCLUDE_DIRS})
+include_directories("/usr/local/include")
+include_directories("/usr/local/include/mysql")
+add_executable(memcache_proxy memcache_proxy.cc)
+target_link_libraries(memcache_proxy ${Boost_LIBRARIES} hiredis)
+add_executable(test_mysql test_mysql.cc)
+target_link_libraries(test_mysql ${Boost_LIBRARIES})
+add_executable(multi_thread_server multi_thread_server.cc)
+target_link_libraries(multi_thread_server ${Boost_LIBRARIES} hiredis pthread
+	rt)

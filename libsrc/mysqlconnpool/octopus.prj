@@ -1,0 +1,3 @@
+depend_component('libsrc/utils')
+depend_third('mysql-5.1.58.tar.gz')
+depend_third('boost-1.55.0.tar.gz')

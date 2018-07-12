@@ -1,0 +1,11 @@
+depend_component('libsrc/utils', type='compile')
+depend_component('rock_api_cpp', type='compile')
+depend_component('image_service/common', type='compile')
+depend_component('image_storage/beansdbclient', type='compile')
+depend_yum("OpenCV-2.4.2.x86_64")
+depend_yum("vlfeat.x86_64")
+depend_yum("libmemcached.x86_64")
+depend_yum("boost.x86_64");
+depend_yum("thrift.x86_64");
+package_dir('output', 'output')
+package_file('octopus.prj', './')

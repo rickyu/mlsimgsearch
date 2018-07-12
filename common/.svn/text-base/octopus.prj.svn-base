@@ -1,0 +1,5 @@
+depend_component('libsrc/utils', type='compile')
+depend_component('rock_api_cpp', type='compile')
+depend_yum("libjpeg6b.x86_64 libxml2-devel.x86_64 boost.x86_64 gearmand041.x86_64 mysql51.x86_64 json-c.x86_64 curl727.x86_64 thrift.x86_64 GraphicsMagick17.x86_64 OpenCV")
+package_dir('output', 'output')
+package_file('octopus.prj', './')

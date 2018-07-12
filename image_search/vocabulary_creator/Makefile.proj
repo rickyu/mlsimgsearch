@@ -1,0 +1,62 @@
+#需要输出的变量
+# BASE : 工程在整个svn中的位置，用于依赖其他模块.
+# MODULE_DEPENDS : 依赖svn中的其他模块.
+# LIBS : 需要链接哪些库. -lxxx -lxxx
+# PROJ_INCLUDE : 
+# SOURCES : 所有的源文件.
+# OUTPUT : 所有产出, 用于clean
+# TEST_PROGRAMS :所有测试程序.
+# SMOKE_PROGRAMS : 冒烟测试程序.
+#
+# 输出的规则: all
+
+BASE := ../../..
+IMAGE_SEARCH_BASE := ..
+IMAGE_SERVICE_BASE := ../..
+BOF_CORE_PATH := $(IMAGE_SEARCH_BASE)/bof_core
+LIBSRC_ROOT := $(BASE)/libsrc
+
+CXX = g++
+CCFLAG = -g -std=c++0x -Wall
+
+LDFLAGS+=-Lcomponents/lib -L/usr/local/lib -L/usr/local/lib/mysql/
+LIBS=-L$(BOF_CORE_PATH)/output/lib -lbof_core -L$(IMAGE_SERVICE_BASE)/common/output/lib -L$(IMAGE_SERVICE_BASE)/image_storage/beansdb_client/output/lib -lbeansdbclient -limgcom -L$(BASE)/libsrc/utils/lib/ -lutils -lopencv_imgproc -lopencv_core -lopencv_contrib -lopencv_features2d -lopencv_nonfree -lopencv_legacy -lcurl -ljson -lmemcached  -lvlfeat
+PROJ_INCLUDE=-I./include -Icomponents/include -I$(BOF_CORE_PATH)/output/include -I$(IMAGE_SERVICE_BASE)/common/include -I$(LIBSRC_ROOT)/utils/output/include/
+BIN=/usr/local/bin
+
+EXTRACTOR_OBJS=src/descriptors_extractor.o
+FORMATTER_OBJS=src/kmeans_tools.o src/cluster_formatter.o
+HAMMINGEBEDDING_OBJS=src/hamming_embedding.o
+
+#=========================================================================
+OUTPUT_PATH ?= output
+bin_dir = $(OUTPUT_PATH)/bin
+.PHONY: all
+all: $(bin_dir)/descriptors_extractor $(bin_dir)/cluster_formatter $(bin_dir)/hamming_embedding
+	if [ ! -d $(OUTPUT_PATH) ]; then mkdir $(OUTPUT_PATH); fi
+	if [ ! -d $(OUTPUT_PATH)/bin ]; then mkdir $(OUTPUT_PATH)/bin; fi
+	if [ ! -d $(OUTPUT_PATH)/conf ]; then mkdir $(OUTPUT_PATH)/conf; fi
+	if [ ! -d $(OUTPUT_PATH)/glcnf ]; then mkdir $(OUTPUT_PATH)/glcnf; fi
+	if [ -d conf/ ]; then cp conf/* $(OUTPUT_PATH)/conf/; fi
+	if [ ! -d $(OUTPUT_PATH)/scripts/ ]; then mkdir $(OUTPUT_PATH)/scripts; fi; cp scripts/* $(OUTPUT_PATH)/scripts/
+OUTPUT += $(bin_dir)/descriptors_extractor $(bin_dir)/cluster_formatter $(bin_dir)/hamming_embedding
+
+lib_sources = $(wildcard src/*.cc)
+
+lib_objs = $(patsubst %.cc,%.o,$(lib_sources))
+
+lib_formatter_objs = $(FORMATTER_OBJS)
+lib_hammingembedding_objs = $(HAMMINGEBEDDING_OBJS)
+lib_extractor_objs = $(filter-out $(MAPPER_OBJS) $(REDUCER_OBJS) $(COMPARER_OBJS) $(FORMATTER_OBJS) $(HAMMINGEBEDDING_OBJS), $(lib_objs))
+
+$(bin_dir)/descriptors_extractor: $(lib_extractor_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/cluster_formatter: $(lib_formatter_objs)
+	[ -d $(bin_dir) ] ||  mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)
+
+$(bin_dir)/hamming_embedding: $(lib_hammingembedding_objs)
+	[ -d $(bin_dir) ] || mkdir -p $(bin_dir)
+	$(CXX) -o $@ $^  $(CCFLAG) $(PROJ_INCLUDE) $(LDFLAGS) $(LIBS)

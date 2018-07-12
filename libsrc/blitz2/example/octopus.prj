@@ -1,0 +1,4 @@
+depend_component('libsrc/blitz2', type='compile')
+depend_yum('boost.x86_64 thrift.x86_64 gperftools.x86_64 libevent2.x86_64')
+
+
