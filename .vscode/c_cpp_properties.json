@@ -9,7 +9,8 @@
                 "/Library/Developer/CommandLineTools/usr/lib/clang/9.1.0/include",
                 "/Library/Developer/CommandLineTools/usr/include",
                 "/usr/include",
-                "${workspaceFolder}/common/include/common"
+                "${workspaceFolder}/common/include/common",
+                "${workspaceFolder}/image_search/thrift_protocol/searchd/gen-cpp/ImageSearchMsg.h"
             ],
             "defines": [],
             "intelliSenseMode": "clang-x64",

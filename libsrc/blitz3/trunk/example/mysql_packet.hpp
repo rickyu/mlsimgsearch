@@ -1,4 +1,0 @@
-
-
-void PackXxx(params, buffer) {
-}
